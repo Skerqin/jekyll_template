@@ -1,0 +1,361 @@
+<!DOCTYPE HTML>
+<html lang="en-US">
+<head>
+<meta charset="UTF-8">
+<title>ZwQuerySystemInformation枚举内核模块</title>
+<link rel="shortcut icon" type="image/x-icon" href="/style/images/favicon.png" />
+<link rel="stylesheet" type="text/css" href="/style/css/style.css" media="all" />
+<link rel="stylesheet" type="text/css" href="/style/css/mystyle.css" media="all" />
+<link href='http://fonts.googleapis.com/css?family=Amaranth' rel='stylesheet' type='text/css'>
+<link href='http://fonts.googleapis.com/css?family=Droid+Serif:400,400italic,700,700italic' rel='stylesheet' type='text/css'>
+<!--[if IE 7]>
+<link rel="stylesheet" type="text/css" href="style/css/ie7.css" media="all" />
+<![endif]-->
+<!--[if IE 8]>
+<link rel="stylesheet" type="text/css" href="style/css/ie8.css" media="all" />
+<![endif]-->
+<!--[if IE 9]>
+<link rel="stylesheet" type="text/css" href="style/css/ie9.css" media="all" />
+<![endif]-->
+<script type="text/javascript" src="/style/js/jquery-1.6.4.min.js"></script>
+<script type="text/javascript" src="/style/js/ddsmoothmenu.js"></script>
+<script type="text/javascript" src="/style/js/jquery.jcarousel.js"></script>
+<script type="text/javascript" src="/style/js/jquery.prettyPhoto.js"></script>
+<script type="text/javascript" src="/style/js/carousel.js"></script>
+<script type="text/javascript" src="/style/js/jquery.flexslider-min.js"></script>
+<script type="text/javascript" src="/style/js/jquery.masonry.min.js"></script>
+<script type="text/javascript" src="/style/js/jquery.slickforms.js"></script>
+</head>
+<body>
+<!-- Begin Wrapper -->
+<div id="wrapper">
+	<!-- Begin Sidebar -->
+	<div id="sidebar" style="height: 8527px;">
+        <div id="content" style="height:110px;">
+		<a href="/index.html"><img src="/style/images/logo.jpg" alt="Profile Picture"  class="round_photo"/></a>
+		</div>
+        <!-- Begin Menu -->
+    <div id="menu" class="menu-v">
+      <ul>
+        <li><a href="/index.html" class="active">Home</a></li>
+        <li><a href="/blogs.html">Blogs</a></li>
+        <li><a href="/contact.html">Contact Us</a></li>
+      </ul>
+    </div>
+    <!-- End Menu -->
+   
+    
+    <div class="sidebox">
+    <ul class="share">
+    	<li><a href="#"><img src="/style/images/icon-rss.png" alt="RSS" /></a></li>
+    	<li><a href="#"><img src="/style/images/icon-facebook.png" alt="Facebook" /></a></li>
+    	<li><a href="#"><img src="/style/images/icon-twitter.png" alt="Twitter" /></a></li>
+    	<li><a href="#"><img src="/style/images/icon-dribbble.png" alt="Dribbble" /></a></li>
+    	<li><a href="#"><img src="/style/images/icon-linkedin.png" alt="LinkedIn" /></a></li>
+    </ul>
+    </div>
+	</div>
+<!-- End Sidebar -->
+<div id="content">
+	<h1 class="title">Blogs</h1>
+	<div class="line"></div>
+	<div class="intro">Nullam id dolor id nibh ultricies vehicula ut id elit. Etiam porta sem malesuada magna mollis euismod. Integer posuere erat a ante venenatis dapibus posuere velit aliquet.</div>
+			
+	<!-- Begin Post -->
+<div class="post">
+	<!-- Begin Info -->
+	<div class="info">
+        <!-- Begin Date -->
+        <div class="date">
+            <div class="day">03</div>
+            <div class="month">Mar</div>
+        </div>
+        <!-- End Date -->
+	
+        <!-- Begin Meta -->
+        <div class="meta">
+            <h1 class="title"><a href="/2014/03/03/Enum_Kernel_Module_with_ZwQuerySystemInformation.html">ZwQuerySystemInformation枚举内核模块</a></h1>
+        </div>
+	<!-- End Meta -->
+	</div>
+	<div class="clear"></div>
+	<!-- End Info -->	
+	<div id="content">
+        <p>函数原型:</p>
+
+<pre><code>:::C
+ NTSTAUS ZwQuerySystemInformation(
+
+__inSYSTEM_INFORMATION_CLASS SystemInformationClass,
+
+__inout  PVOID SystemInformation,
+
+__inULONG SystemInformationLength,
+
+__out_optPULONG ReturnLength
+
+   );
+</code></pre>
+
+<p>MSDN中说该函数在后续的Windows版本中可能会被改变或取消，建议使用其他替代函数～～额，无视，这里只说该函数的一个用法。</p>
+
+<p>当SystemInformationClass的值为SystemModuleInformation（对应值为0x0b）时，可以用来枚举内核中已加载的模块。</p>
+
+<p>使用时，可以先将SystemInformation设为NULL，来获取信息所需内存的大小:</p>
+
+<pre><code>ZwQuerySystemInformation(SystemModuleInformation,NULL,0,&amp;NeedLen);
+</code></pre>
+
+<p>然后根据返回NeedLen的大小来申请内存空间，最后在调用ZwQuerySystemInformation获取信息。</p>
+
+<p>返回SYSTEM_MODULE_INFORMATION结构，其中的Module是一个数组，元素个数由Count决定。</p>
+
+<p>这里需要说的是，在360的Hookport.sys文件中采取了另外一种方法。及先申请一定大小的空间，然后调用ZwQuerySystemInformation获取信息，判断返回值，如果是STATUS_INFO_LENGTH_MISMATCH，则释放已经申请的空间，重新申请更大的空间，再次调用ZwQuerySystemInformation，直到返回成功或者其他错误信息。目前并不是很清楚为什么要用这种方法，猜测是为了防止使用ZwQuerySystemInformation获取所需空间之后，系统触发时钟中断，切换到其他进程之后，又加载新的模块进入内核空间，当切换回本进程时，再调用ZwQuerySystemInformation则会失败。</p>
+
+<p>   额～～好吧，MJ0011在debugman上给了答复，在win2000中ZwQuerySystemInformation并不支持返回NeedLen。</p>
+
+<p>然后～～上代码：</p>
+
+<pre><code>#include &lt;ntifs.h&gt;
+
+
+
+NTKERNELAPI
+
+NTSTATUS ZwQuerySystemInformation(
+
+        IN  ULONG SystemInformationClass,
+
+        IN  OUT PVOID SystemInformation,
+
+        IN  ULONG SystemInformationLength,
+
+        OUT PULONG ReturnLength OPTIONAL
+
+);
+
+
+
+typedef struct _SYSTEM_MODULE_INFORMATION_ENTRY {
+
+    HANDLE Section;
+
+    PVOID MappedBase;
+
+    PVOID Base;
+
+    ULONG Size;
+
+    ULONG Flags;
+
+    USHORT LoadOrderIndex;
+
+    USHORT InitOrderIndex;
+
+    USHORT LoadCount;
+
+    USHORT PathLength;
+
+    CHAR ImageName[256];
+
+} SYSTEM_MODULE_INFORMATION_ENTRY, *PSYSTEM_MODULE_INFORMATION_ENTRY;
+
+
+
+
+
+typedef struct _SYSTEM_MODULE_INFORMATION {
+
+    ULONG Count;
+
+    SYSTEM_MODULE_INFORMATION_ENTRY Module[1];
+
+} SYSTEM_MODULE_INFORMATION, *PSYSTEM_MODULE_INFORMATION;
+
+
+
+
+
+
+
+VOID MyUnload(PDRIVER_OBJECT DriverObject)
+
+{
+
+}
+
+
+
+NTSTATUS DriverEntry(PDRIVER_OBJECT DriverObject, PUNICODE_STRING RegistryPath)
+
+{
+
+    ULONG ReturnLength;
+
+    PSYSTEM_MODULE_INFORMATION pBuf;
+
+
+
+#if DBG
+
+_asm int 3
+
+#endif
+
+
+
+    DriverObject-&gt;DriverUnload = MyUnload;
+
+
+
+    ZwQuerySystemInformation(0x0b, NULL, NULL, &amp;ReturnLength);
+
+    pBuf = ExAllocatePoolWithTag(NonPagedPool, ReturnLength, 'Ddk ');
+
+    ZwQuerySystemInformation(0x0b, pBuf, ReturnLength, &amp;ReturnLength);
+
+    ExFreePool(pBuf);
+
+
+
+    return STATUS_SUCCESS;
+
+}
+</code></pre>
+
+<p>ZwQuerySystemInformation需要声明为导入函数，在ntifs.h中有#define NTKERNELAPI DECLSPEC_IMPORT</p>
+
+<p>另外一种方法就不写了，最后总结一下该功能涉及到的声明：</p>
+
+<pre><code>NTKERNELAPI
+
+NTSTATUS ZwQuerySystemInformation(
+
+        IN  ULONG SystemInformationClass,
+
+        IN  OUT PVOID SystemInformation,
+
+        IN  ULONG SystemInformationLength,
+
+        OUT PULONG ReturnLength OPTIONAL
+
+);
+
+
+
+
+
+typedef struct _SYSTEM_MODULE_INFORMATION_ENTRY {
+
+    HANDLE Section;
+
+    PVOID MappedBase;
+
+    PVOID Base;
+
+    ULONG Size;
+
+    ULONG Flags;
+
+    USHORT LoadOrderIndex;
+
+    USHORT InitOrderIndex;
+
+    USHORT LoadCount;
+
+    USHORT PathLength;
+
+    CHAR ImageName[256];
+
+} SYSTEM_MODULE_INFORMATION_ENTRY, *PSYSTEM_MODULE_INFORMATION_ENTRY;
+
+
+
+
+
+typedef struct _SYSTEM_MODULE_INFORMATION {
+
+    ULONG Count;
+
+    SYSTEM_MODULE_INFORMATION_ENTRY Module[1];
+
+} SYSTEM_MODULE_INFORMATION, *PSYSTEM_MODULE_INFORMATION;
+
+
+
+typedef enum _SYSTEM_INFORMATION_CLASS { 
+SystemBasicInformation, // 0 Y N 
+SystemProcessorInformation, // 1 Y N 
+SystemPerformanceInformation, // 2 Y N 
+SystemTimeOfDayInformation, // 3 Y N 
+SystemNotImplemented1, // 4 Y N 
+SystemProcessesAndThreadsInformation, // 5 Y N 
+SystemCallCounts, // 6 Y N 
+SystemConfigurationInformation, // 7 Y N 
+SystemProcessorTimes, // 8 Y N 
+SystemGlobalFlag, // 9 Y Y 
+SystemNotImplemented2, // 10 Y N 
+SystemModuleInformation, // 11 Y N 
+SystemLockInformation, // 12 Y N 
+SystemNotImplemented3, // 13 Y N 
+SystemNotImplemented4, // 14 Y N 
+SystemNotImplemented5, // 15 Y N 
+SystemHandleInformation, // 16 Y N 
+SystemObjectInformation, // 17 Y N 
+SystemPagefileInformation, // 18 Y N 
+SystemInstructionEmulationCounts, // 19 Y N 
+SystemInvalidInfoClass1, // 20 
+SystemCacheInformation, // 21 Y Y 
+SystemPoolTagInformation, // 22 Y N 
+SystemProcessorStatistics, // 23 Y N 
+SystemDpcInformation, // 24 Y Y 
+SystemNotImplemented6, // 25 Y N 
+SystemLoadImage, // 26 N Y 
+SystemUnloadImage, // 27 N Y 
+SystemTimeAdjustment, // 28 Y Y 
+SystemNotImplemented7, // 29 Y N 
+SystemNotImplemented8, // 30 Y N 
+SystemNotImplemented9, // 31 Y N 
+SystemCrashDumpInformation, // 32 Y N 
+SystemExceptionInformation, // 33 Y N 
+SystemCrashDumpStateInformation, // 34 Y Y/N 
+SystemKernelDebuggerInformation, // 35 Y N 
+SystemContextSwitchInformation, // 36 Y N 
+SystemRegistryQuotaInformation, // 37 Y Y 
+SystemLoadAndCallImage, // 38 N Y 
+SystemPrioritySeparation, // 39 N Y 
+SystemNotImplemented10, // 40 Y N 
+SystemNotImplemented11, // 41 Y N 
+SystemInvalidInfoClass2, // 42 
+SystemInvalidInfoClass3, // 43 
+SystemTimeZoneInformation, // 44 Y N 
+SystemLookasideInformation, // 45 Y N 
+SystemSetTimeSlipEvent, // 46 N Y 
+SystemCreateSession, // 47 N Y 
+SystemDeleteSession, // 48 N Y 
+SystemInvalidInfoClass4, // 49 
+SystemRangeStartInformation, // 50 Y N 
+SystemVerifierInformation, // 51 Y Y 
+SystemAddVerifier, // 52 N Y 
+SystemSessionProcessesInformation // 53 Y N 
+} SYSTEM_INFORMATION_CLASS; 
+</code></pre>
+
+<p>　　　　</p>
+
+    </div>	
+</div>
+<!-- End Post -->
+
+</div>
+	
+</div>
+<!-- End Wrapper -->
+<div class="clear"></div>
+<script type="text/javascript" src="style/js/scripts.js"></script>
+<!--[if !IE]> -->
+<script type="text/javascript" src="style/js/jquery.corner.js"></script>
+<!-- <![endif]-->
+<div style="display:none"><script src='http://v7.cnzz.com/stat.php?id=155540&web_id=155540' language='JavaScript' charset='gb2312'></script></div>
+</body>
+</html>

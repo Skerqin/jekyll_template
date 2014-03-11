@@ -1,0 +1,5 @@
+markdown: rdiscount
+auto: true
+encoding: utf-8
+pygments: true
+Destination: ./../skerqin.github.io

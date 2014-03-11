@@ -1,0 +1,30 @@
+---
+layout: default
+---
+
+
+<div class="post">
+		<a href="post.html"><img src="style/images/art/slide1.jpg" alt="" /></a>		
+		<!-- Begin Info -->
+		<div class="info">
+            <!-- Begin Date -->
+            <div class="date">
+                <div class="day">{{ page.date | date: "%d" }}</div>
+                <div class="month">{{ page.date | date: "%b" }}</div>
+            </div>
+            <!-- End Date -->
+		
+            <!-- Begin Meta -->
+            <div class="meta">
+                <h3 class="title"><a href="./{{ post.url }}">{{ page.title }}</a></h3>
+            </div>
+            <!-- End Meta -->
+		</div>
+		<div class="clear"></div>
+		<!-- End Info -->
+		
+		{{content }}
+		
+		</div>
+		<!-- End Post -->
+</div>
